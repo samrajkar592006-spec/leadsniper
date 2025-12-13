@@ -9,12 +9,11 @@ import pandas as pd
 import time
 import uuid
 import os
-import re
 
 app = Flask(__name__)
 CORS(app)
 
-# --- THE "BILLION DOLLAR" UI (Clean, Modern, Trustworthy) ---
+# --- THE UPGRADED 3D UI ---
 HTML_CODE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -22,145 +21,246 @@ HTML_CODE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LeadSniper Enterprise</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         :root {
-            --primary: #2563EB; /* Enterprise Blue */
-            --dark: #0F172A;    /* Slate Black */
-            --gray: #64748B;    /* Cool Gray */
-            --bg: #F8FAFC;      /* Off White */
+            --primary: #3b82f6;
+            --accent: #8b5cf6;
+            --dark: #020617;
+            --glass: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        
-        body { background-color: var(--bg); color: var(--dark); }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        /* Navigation */
+        body {
+            background-color: var(--dark);
+            color: white;
+            font-family: 'Outfit', sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.15), transparent 25%);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 3D Background Grid */
+        .grid-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-image: linear-gradient(var(--border) 1px, transparent 1px),
+            linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 50px 50px;
+            opacity: 0.05;
+            z-index: -1;
+            transform: perspective(500px) rotateX(60deg) translateY(-100px) scale(2);
+            pointer-events: none;
+        }
+
         nav {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 20px 60px; background: white; border-bottom: 1px solid #E2E8F0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 50px;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        .logo { font-weight: 800; font-size: 20px; letter-spacing: -0.5px; color: var(--dark); display: flex; align-items: center; gap: 10px;}
-        .logo span { background: var(--primary); color: white; padding: 2px 8px; border-radius: 6px; font-size: 14px;}
-        .nav-links { display: flex; gap: 30px; font-size: 14px; font-weight: 500; color: var(--gray); }
-        .nav-btn { background: var(--dark); color: white; padding: 10px 20px; border-radius: 8px; font-weight: 600; border: none; cursor: pointer;}
 
-        /* Hero Section */
-        .hero {
-            max-width: 800px; margin: 100px auto; text-align: center; padding: 0 20px;
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(to right, #60a5fa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        
-        .badge {
-            background: #EFF6FF; color: var(--primary); padding: 6px 16px; border-radius: 50px;
-            font-size: 13px; font-weight: 600; display: inline-block; margin-bottom: 24px;
-            border: 1px solid #BFDBFE;
+
+        .hero {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 40px 20px;
+            perspective: 1000px; /* Enables 3D space */
         }
 
         h1 {
-            font-size: 56px; line-height: 1.1; font-weight: 800; letter-spacing: -2px; margin-bottom: 20px; color: var(--dark);
+            font-size: 64px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 20px;
+            text-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
+        }
+        
+        h1 span { color: var(--primary); }
+
+        .subtitle {
+            font-size: 18px;
+            color: #94a3b8;
+            max-width: 600px;
+            margin-bottom: 50px;
         }
 
-        p { color: var(--gray); font-size: 18px; line-height: 1.6; margin-bottom: 40px; }
-
-        /* The Input Component */
-        .search-container {
-            background: white;
-            padding: 8px;
-            border-radius: 16px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        /* The 3D Card */
+        .search-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            padding: 10px;
+            border-radius: 20px;
             display: flex;
-            align-items: center;
-            border: 1px solid #E2E8F0;
-            transition: 0.3s;
-        }
-
-        .search-container:focus-within {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+            gap: 10px;
+            width: 100%;
+            max-width: 700px;
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            backdrop-filter: blur(20px);
+            transition: transform 0.1s; /* Smooth movement */
+            transform-style: preserve-3d;
         }
 
         input {
-            flex-grow: 1; border: none; outline: none; padding: 15px 20px; font-size: 16px; color: var(--dark); border-radius: 12px;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 18px;
+            padding: 20px;
+            width: 100%;
+            outline: none;
         }
-        input::placeholder { color: #94A3B8; }
 
-        button#scrapeBtn {
-            background: var(--primary); color: white; border: none;
-            padding: 16px 32px; border-radius: 10px; font-weight: 600; font-size: 16px;
-            cursor: pointer; transition: 0.2s;
+        /* 3D Button */
+        button {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 14px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 
+                0 10px 15px -3px rgba(59, 130, 246, 0.4),
+                0 4px 0 #1e40af; /* 3D Edge */
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        button#scrapeBtn:hover { background: #1D4ED8; transform: translateY(-1px); }
-        button:disabled { opacity: 0.7; cursor: not-allowed; }
 
-        /* Results Area */
-        #status { margin-top: 40px; }
-        
+        button:active {
+            transform: translateY(4px); /* Pushes down */
+            box-shadow: 0 0 0 #1e40af; /* Removes edge shadow */
+        }
+
+        button:disabled {
+            opacity: 0.7;
+            cursor: wait;
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        /* Status & Results */
+        #status {
+            margin-top: 50px;
+            width: 100%;
+            max-width: 700px;
+            min-height: 60px;
+        }
+
         .success-card {
-            background: white; border: 1px solid #E2E8F0; padding: 30px; border-radius: 12px;
-            display: inline-block; text-align: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            background: linear-gradient(145deg, #064e3b, #065f46);
+            border: 1px solid #34d399;
+            padding: 25px;
+            border-radius: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
         }
-        
+
         .download-btn {
-            display: inline-block; background: #10B981; color: white; padding: 12px 24px;
-            border-radius: 8px; text-decoration: none; font-weight: 600; margin-top: 15px;
-            box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.39);
+            background: white;
+            color: #064e3b;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.2s;
         }
 
-        .loader {
-            width: 24px; height: 24px; border: 3px solid #E2E8F0; border-bottom-color: var(--primary);
-            border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite;
+        .download-btn:hover { transform: scale(1.05); }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.8) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
         }
-        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        .trust-metrics {
-            margin-top: 60px; display: flex; justify-content: center; gap: 40px; color: #94A3B8; font-size: 14px; font-weight: 500;
-        }
-
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
+    <div class="grid-bg"></div>
+
     <nav>
-        <div class="logo">LeadSniper <span>PRO</span></div>
-        <div class="nav-links">
-            <span>Products</span>
-            <span>Enterprise</span>
-            <span>Pricing</span>
-        </div>
-        <button class="nav-btn">Sign In</button>
+        <div class="logo"><i class="fa-solid fa-crosshairs"></i> LeadSniper</div>
+        <div style="font-size: 14px; opacity: 0.7;">ENTERPRISE V3.0</div>
     </nav>
 
     <div class="hero">
-        <div class="badge">v2.0 Algorithm Now Live</div>
-        <h1>Unlock B2B Growth with <br> <span style="color: var(--primary)">Precision Data</span></h1>
-        <p>Instantly extract verified business contacts from Google Maps.<br>Trusted by 10,000+ growth agencies worldwide.</p>
-        
-        <div class="search-container">
-            <input type="text" id="keyword" placeholder="e.g. Interior Designers in New York">
-            <button id="scrapeBtn" onclick="startScrape()">Start Extraction</button>
+        <h1>Extract Leads <br> with <span>Precision</span></h1>
+        <p class="subtitle">AI-powered extraction engine for Google Maps. Get verified B2B contacts instantly.</p>
+
+        <div class="search-card" id="tiltCard">
+            <input type="text" id="keyword" placeholder="e.g. Real Estate Agents in Dubai">
+            <button id="scrapeBtn" onclick="startScrape()">
+                <i class="fa-solid fa-bolt"></i> Start
+            </button>
         </div>
 
         <div id="status"></div>
-
-        <div class="trust-metrics">
-            <span>🔒 SOC2 Compliant</span>
-            <span>⚡ 99.9% Uptime</span>
-            <span>🌍 Global Coverage</span>
-        </div>
     </div>
 
     <script>
+        // --- 3D TILT EFFECT SCRIPT ---
+        const card = document.getElementById('tiltCard');
+        document.addEventListener('mousemove', (e) => {
+            const xAxis = (window.innerWidth / 2 - e.pageX) / 25;
+            const yAxis = (window.innerHeight / 2 - e.pageY) / 25;
+            card.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+        });
+
         async function startScrape() {
             const query = document.getElementById('keyword').value;
             const statusDiv = document.getElementById('status');
             const btn = document.getElementById('scrapeBtn');
             
-            if(!query) { alert("Please enter a target industry."); return; }
-
-            // UI Loading State
-            btn.innerHTML = '<span class="loader"></span> Processing...';
+            if(!query) { alert("Please enter a keyword."); return; }
+            
+            // Loading State
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Working';
             btn.disabled = true;
-            statusDiv.innerHTML = "<p style='font-size:14px; color: var(--gray)'>Initializing Headless Browser & Scanning Maps...</p>";
+            statusDiv.innerHTML = '<div style="color: #94a3b8; font-size: 14px; margin-top: 20px;">Initializing Neural Engine...</div>';
             
             try {
                 const response = await fetch('/api/scrape', {
@@ -168,27 +268,25 @@ HTML_CODE = """
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ query: query })
                 });
-                
                 const data = await response.json();
                 
                 if (data.download_url) {
                     statusDiv.innerHTML = `
                         <div class="success-card">
-                            <h3 style="margin-bottom:10px; color:var(--dark)">Extraction Complete</h3>
-                            <p style="margin-bottom:0px; font-size:14px;">Found ${data.count} Verified Business Leads</p>
-                            <a href="${data.download_url}" class="download-btn">Download CSV Report</a>
-                        </div>
-                    `;
-                } else {
-                    statusDiv.innerHTML = `<span style='color:red'>Error: ${data.error}</span>`;
+                            <div>
+                                <h3 style="font-size: 18px; margin-bottom: 5px;"><i class="fa-solid fa-check-circle"></i> Extraction Complete</h3>
+                                <p style="font-size: 14px; opacity: 0.9;">Successfully scraped ${data.count} leads</p>
+                            </div>
+                            <a href="${data.download_url}" class="download-btn"><i class="fa-solid fa-download"></i> Download CSV</a>
+                        </div>`;
+                } else { 
+                    statusDiv.innerHTML = `<div style="color: #ef4444; margin-top: 20px;"><i class="fa-solid fa-triangle-exclamation"></i> Error: ${data.error}</div>`; 
                 }
-            } catch (e) {
-                console.error(e);
-                statusDiv.innerHTML = "<span style='color:red'>Server Connection Failed.</span>";
+            } catch (e) { 
+                statusDiv.innerHTML = `<div style="color: #ef4444; margin-top: 20px;">Server connection failed.</div>`; 
             }
             
-            // Reset Button
-            btn.innerHTML = 'Start Extraction';
+            btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Start'; 
             btn.disabled = false;
         }
     </script>
@@ -210,66 +308,44 @@ def scrape_endpoint():
     driver = None
     
     try:
+        # --- DOCKER COMPATIBLE OPTIONS ---
         chrome_options = Options()
-        chrome_options.add_argument("--start-maximized")
-        # chrome_options.add_argument("--headless") # Uncomment for invisible mode
+        chrome_options.add_argument("--headless") 
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
         
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
         
+        # --- STANDARD SEARCH URL (More reliable) ---
         url = f"https://www.google.com/maps/search/{query.replace(' ', '+')}"
         driver.get(url)
-        time.sleep(4) 
+        time.sleep(3) 
         
-        # Quick Scroll
-        try:
-            sidebar = driver.find_element(By.XPATH, "//div[@role='feed']")
-            for _ in range(3):
-                driver.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", sidebar)
-                time.sleep(1.5)
-        except:
-            pass
-
         cards = driver.find_elements(By.CLASS_NAME, "Nv2PK")
-        
         for card in cards:
             try:
                 text_all = card.text
                 lines = text_all.split('\n')
-                name = lines[0]
-                
-                phone = "N/A"
-                match = re.search(r'((\+91|0\d{2,4})?[ -]?)?\d{5}[ -]?\d{5}', text_all)
-                if match:
-                    phone = match.group(0)
-                
-                leads.append({
-                    "Business Name": name,
-                    "Phone": phone,
-                    "Full Data": text_all.replace("\n", ", ")
-                })
-            except:
-                continue
+                leads.append({"Business Name": lines[0], "Full Data": text_all.replace("\n", ", ")})
+            except: continue
                 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
     finally:
-        if driver:
-            driver.quit()
+        if driver: driver.quit()
 
     filename = f"leads_{uuid.uuid4()}.csv"
     df = pd.DataFrame(leads)
     df.to_csv(filename, index=False)
     
-    return jsonify({
-        "message": "Success", 
-        "download_url": f"/download/{filename}",
-        "count": len(leads)
-    })
+    return jsonify({"message": "Success", "download_url": f"/download/{filename}", "count": len(leads)})
 
 @app.route('/download/<filename>')
 def download_file(filename):
     return send_file(filename, as_attachment=True)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
