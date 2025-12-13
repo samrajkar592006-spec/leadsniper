@@ -11,8 +11,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 app = Flask(__name__)
 
-# --- 1. THE FRONTEND (Netflix Style 3D) ---
-# We store the HTML inside this variable instead of a separate file
+# --- 1. THE FRONTEND (3D Globe + Voice) ---
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -20,7 +19,7 @@ HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LeadSniper Enterprise</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;600&display=swap" rel="stylesheet">
     
     <style>
         body {
@@ -28,10 +27,6 @@ HTML_TEMPLATE = """
             overflow: hidden;
             font-family: 'Inter', sans-serif;
             color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             background: #000;
         }
         #vanta-canvas {
@@ -40,74 +35,110 @@ HTML_TEMPLATE = """
             height: 100%;
             z-index: -1;
         }
+        
+        /* Intro Overlay */
+        #intro-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            cursor: pointer;
+            transition: opacity 1s ease;
+        }
+        #intro-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            color: #4facfe;
+            animation: pulse 1.5s infinite;
+        }
+        
         .container {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
             text-align: center;
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(10, 20, 40, 0.7);
             padding: 50px;
             border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 0 50px rgba(0, 150, 255, 0.2);
+            border: 1px solid rgba(79, 172, 254, 0.3);
+            backdrop-filter: blur(15px);
+            box-shadow: 0 0 80px rgba(0, 150, 255, 0.2);
             max-width: 600px;
             width: 90%;
+            opacity: 0; /* Hidden until intro click */
+            transition: opacity 1s ease;
         }
+
         h1 {
+            font-family: 'Orbitron', sans-serif;
             font-size: 3.5rem;
             margin: 0 0 10px 0;
             background: linear-gradient(to right, #4facfe 0%, #00f2fe 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            font-weight: 800;
-            letter-spacing: -2px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
-        p { color: #aaa; font-size: 1.1rem; margin-bottom: 30px; }
+        
+        p { color: #88c0d0; font-size: 1.1rem; margin-bottom: 30px; }
         
         input {
             width: 80%;
             padding: 15px;
-            border-radius: 30px;
-            border: 1px solid rgba(255,255,255,0.2);
-            background: rgba(0, 0, 0, 0.5);
-            color: white;
+            border-radius: 5px;
+            border: 1px solid #4facfe;
+            background: rgba(0, 20, 40, 0.8);
+            color: #00f2fe;
+            font-family: 'Orbitron', sans-serif;
             font-size: 1.2rem;
             outline: none;
             margin-bottom: 25px;
             text-align: center;
-            transition: 0.3s;
+            box-shadow: 0 0 15px rgba(79, 172, 254, 0.2);
         }
-        input:focus {
-            border-color: #4facfe;
-            box-shadow: 0 0 20px rgba(79, 172, 254, 0.3);
-        }
+        
         button {
             padding: 15px 50px;
-            border-radius: 30px;
+            border-radius: 5px;
             border: none;
             background: #4facfe;
-            color: white;
-            font-weight: bold;
+            color: #000;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
             font-size: 1.2rem;
             cursor: pointer;
             transition: all 0.3s ease;
             text-transform: uppercase;
             letter-spacing: 1px;
+            box-shadow: 0 0 20px rgba(79, 172, 254, 0.5);
         }
         button:hover {
             transform: scale(1.05);
-            box-shadow: 0 0 30px #4facfe;
+            background: #fff;
+            box-shadow: 0 0 40px #fff;
         }
-        button:disabled { background: #333; cursor: not-allowed; }
-        #status { margin-top: 25px; font-size: 0.9rem; min-height: 20px; }
+        
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
     </style>
 </head>
 <body>
+
+    <div id="intro-overlay" onclick="enterSystem()">
+        <div id="intro-text">CLICK TO INITIALIZE SYSTEM</div>
+    </div>
+
     <div id="vanta-canvas"></div>
     
-    <div class="container">
+    <div class="container" id="main-interface">
         <h1>LEAD SNIPER</h1>
-        <p>Global Geospatial Extraction System</p>
+        <p>Target. Extract. Dominate.</p>
         
-        <input type="text" id="query" placeholder="e.g. Dentists in London">
+        <input type="text" id="query" placeholder="ENTER TARGET SECTOR (e.g. Gyms NY)">
         <br>
         <button id="btn" onclick="startScraping()">INITIATE SCAN</button>
         
@@ -115,37 +146,63 @@ HTML_TEMPLATE = """
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.globe.min.js"></script>
+    
     <script>
-        // 3D Background Effect
-        VANTA.NET({
-          el: "#vanta-canvas",
-          mouseControls: true,
-          touchControls: true,
-          gyroControls: false,
-          minHeight: 200.00,
-          minWidth: 200.00,
-          scale: 1.00,
-          scaleMobile: 1.00,
-          color: 0x4facfe,
-          backgroundColor: 0x050505,
-          points: 12.00,
-          maxDistance: 22.00,
-          spacing: 16.00
-        })
+        // 1. Voice Function
+        function speak(text) {
+            const synth = window.speechSynthesis;
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.pitch = 0.8; // Lower pitch for "AI" feel
+            utterance.rate = 0.9;
+            utterance.volume = 1;
+            synth.speak(utterance);
+        }
 
+        // 2. Enter System (Click to start voice & 3D)
+        function enterSystem() {
+            document.getElementById('intro-overlay').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('intro-overlay').style.display = 'none';
+                document.getElementById('main-interface').style.opacity = '1';
+            }, 1000);
+
+            // Play voice
+            speak("Welcome to Lead Sniper. System Online.");
+
+            // Start 3D Effect (Globe)
+            VANTA.GLOBE({
+              el: "#vanta-canvas",
+              mouseControls: true,
+              touchControls: true,
+              gyroControls: false,
+              minHeight: 200.00,
+              minWidth: 200.00,
+              scale: 1.00,
+              scaleMobile: 1.00,
+              color: 0x4facfe,
+              backgroundColor: 0x000000
+            });
+        }
+
+        // 3. Scraping Logic
         async function startScraping() {
             const query = document.getElementById('query').value;
             const status = document.getElementById('status');
             const btn = document.getElementById('btn');
             
-            if (!query) { status.innerText = "Please enter a search term."; return; }
+            if (!query) { 
+                speak("Error. No target specified.");
+                status.innerText = "Please enter a search term."; 
+                return; 
+            }
 
-            // UI Update
-            status.innerText = "Connecting to Satellite... Extracting Data...";
+            status.innerText = "Accessing Satellite Feed... Extracting Max 100 Leads...";
             status.style.color = "#4facfe";
             btn.disabled = true;
             btn.innerText = "SCANNING...";
+            
+            speak("Initiating scan. Please wait while we extract data.");
 
             try {
                 const response = await fetch('/api/scrape', {
@@ -157,19 +214,21 @@ HTML_TEMPLATE = """
                 const data = await response.json();
                 
                 if (data.download_url) {
+                    speak("Extraction complete. Downloading file.");
                     status.innerText = "Extraction Complete. Downloading File.";
                     status.style.color = "#00ff00";
                     window.location.href = data.download_url;
                 } else {
-                    status.innerText = "Error: " + (data.error || "Unknown issue");
+                    status.innerText = "Error: " + (data.error || "Timeout or Invalid Query");
                     status.style.color = "red";
+                    speak("System Error. Extraction failed.");
                 }
             } catch (e) {
-                status.innerText = "System Error. Check logs.";
+                status.innerText = "System Timeout (Limit exceeded for Free Plan).";
                 status.style.color = "red";
+                speak("Connection timed out.");
             }
             
-            // Reset UI
             btn.disabled = false;
             btn.innerText = "INITIATE SCAN";
         }
@@ -178,76 +237,68 @@ HTML_TEMPLATE = """
 </html>
 """
 
-# --- 2. THE BACKEND LOGIC (With Scrolling) ---
+# --- 2. OPTIMIZED BACKEND (Strict 100 Limit) ---
 
 def run_scraper(search_query):
-    # Setup Chrome options for Render/Docker
     chrome_options = Options()
     chrome_options.add_argument("--headless") 
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--window-size=1920,1080")
     
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     leads = []
     
     try:
-        # Construct URL
         url = f"https://www.google.com/maps/search/{search_query.replace(' ', '+')}"
         driver.get(url)
-        time.sleep(4)  # Initial load
+        time.sleep(3) # Reduced wait time to save seconds
 
-        # --- SCROLLING LOGIC FOR 100+ LEADS ---
-        print("Starting scroll sequence...")
+        # Find Scroll Container
         try:
-            # We look for the "feed" div where results live
-            # Note: Selectors change often, but 'div[role="feed"]' is common for the sidebar
             scrollable_div = driver.find_element(By.CSS_SELECTOR, 'div[role="feed"]')
             
-            # Scroll loop (20 times should get 80-120 results)
-            for _ in range(20):
+            # --- OPTIMIZED SCROLL LOOP ---
+            # We scroll fast and check count to break EARLY
+            for _ in range(15): # Max 15 scrolls to prevent timeouts
                 driver.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", scrollable_div)
-                time.sleep(2) # Give it time to load new boxes
+                time.sleep(1.5) # Reduced sleep
                 
-                # Optional: Check if we have enough yet to speed things up
-                count = len(driver.find_elements(By.CLASS_NAME, "Nv2PK"))
-                if count >= 120:
+                # Check current count
+                current_items = driver.find_elements(By.CLASS_NAME, "Nv2PK")
+                if len(current_items) >= 100:
+                    print("Reached 100 leads limit. Stopping scroll.")
                     break
-        except Exception as e:
-            print(f"Scroll Warning: {e}")
+        except:
+            pass # If scrolling fails, just scrape what's visible
 
-        # --- SCRAPING LOGIC ---
-        items = driver.find_elements(By.CLASS_NAME, "Nv2PK") # The class for business cards
-        print(f"Found {len(items)} items. Extracting text...")
+        # --- EXTRACT DATA (Strictly capped at 100) ---
+        items = driver.find_elements(By.CLASS_NAME, "Nv2PK")
         
+        count = 0
         for item in items:
+            if count >= 100: # FORCE STOP AT 100
+                break
+                
             try:
-                # Get all text and split by lines
                 data = item.text.split('\n')
                 if not data: continue
-                
                 name = data[0]
                 
-                # Basic filter to remove Ads
-                if "Ad" in name or "." in name[:2]: 
-                    continue
-                    
-                leads.append({
-                    "Business Name": name,
-                    "Raw Details": " | ".join(data[1:]) # Joins address, rating, etc.
-                })
+                if "Ad" not in name: 
+                    leads.append({
+                        "Business Name": name,
+                        "Details": " | ".join(data[1:])
+                    })
+                    count += 1
             except:
                 continue
                 
     except Exception as e:
-        print(f"Critical Error: {e}")
-        return None
+        print(f"Error: {e}")
     finally:
         driver.quit()
 
-    # Save to CSV
-    if not leads:
-        return None
+    if not leads: return None
         
     filename = f"leads_{uuid.uuid4()}.csv"
     df = pd.DataFrame(leads)
@@ -258,37 +309,24 @@ def run_scraper(search_query):
 
 @app.route('/')
 def home():
-    # Renders the HTML string we defined at the top
     return render_template_string(HTML_TEMPLATE)
 
 @app.route('/api/scrape', methods=['POST'])
 def scrape_endpoint():
     data = request.json
-    query = data.get('query')
-    
-    if not query:
-        return jsonify({"error": "No query provided"}), 400
-
-    print(f"Received Request: {query}")
-    file_path = run_scraper(query)
+    file_path = run_scraper(data.get('query'))
     
     if file_path:
-        return jsonify({
-            "message": "Success", 
-            "download_url": f"/download/{file_path}"
-        })
+        return jsonify({"message": "Success", "download_url": f"/download/{file_path}"})
     else:
-        return jsonify({"error": "Failed to extract data or no results found."}), 500
+        return jsonify({"error": "Failed to find leads."}), 500
 
 @app.route('/download/<filename>')
 def download_file(filename):
-    try:
-        return send_file(filename, as_attachment=True)
-    except Exception as e:
-        return str(e), 404
+    return send_file(filename, as_attachment=True)
 
 if __name__ == '__main__':
-    # Get PORT from Render, default to 5000
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+
 
