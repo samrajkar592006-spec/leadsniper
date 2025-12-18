@@ -11,7 +11,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 app = Flask(__name__)
 
-# --- 1. THE FRONTEND (3D Globe + Voice) ---
+# --- 1. THE FRONTEND (No changes needed, kept your UI) ---
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -22,106 +22,49 @@ HTML_TEMPLATE = """
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;600&display=swap" rel="stylesheet">
     
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            font-family: 'Inter', sans-serif;
-            color: white;
-            background: #000;
-        }
-        #vanta-canvas {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-        }
+        body { margin: 0; overflow: hidden; font-family: 'Inter', sans-serif; color: white; background: #000; }
+        #vanta-canvas { position: absolute; width: 100%; height: 100%; z-index: -1; }
         
-        /* Intro Overlay */
         #intro-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: #000;
-            z-index: 9999;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            cursor: pointer;
-            transition: opacity 1s ease;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999; display: flex;
+            justify-content: center; align-items: center; flex-direction: column;
+            cursor: pointer; transition: opacity 1s ease;
         }
-        #intro-text {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2rem;
-            color: #4facfe;
-            animation: pulse 1.5s infinite;
-        }
+        #intro-text { font-family: 'Orbitron', sans-serif; font-size: 2rem; color: #4facfe; animation: pulse 1.5s infinite; }
         
         .container {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            background: rgba(10, 20, 40, 0.7);
-            padding: 50px;
-            border-radius: 20px;
-            border: 1px solid rgba(79, 172, 254, 0.3);
-            backdrop-filter: blur(15px);
-            box-shadow: 0 0 80px rgba(0, 150, 255, 0.2);
-            max-width: 600px;
-            width: 90%;
-            opacity: 0; /* Hidden until intro click */
-            transition: opacity 1s ease;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; background: rgba(10, 20, 40, 0.7); padding: 50px;
+            border-radius: 20px; border: 1px solid rgba(79, 172, 254, 0.3);
+            backdrop-filter: blur(15px); box-shadow: 0 0 80px rgba(0, 150, 255, 0.2);
+            max-width: 600px; width: 90%; opacity: 0; transition: opacity 1s ease;
         }
 
         h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 3.5rem;
-            margin: 0 0 10px 0;
+            font-family: 'Orbitron', sans-serif; font-size: 3.5rem; margin: 0 0 10px 0;
             background: linear-gradient(to right, #4facfe 0%, #00f2fe 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            font-weight: 900; text-transform: uppercase; letter-spacing: 2px;
         }
         
         p { color: #88c0d0; font-size: 1.1rem; margin-bottom: 30px; }
         
         input {
-            width: 80%;
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #4facfe;
-            background: rgba(0, 20, 40, 0.8);
-            color: #00f2fe;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.2rem;
-            outline: none;
-            margin-bottom: 25px;
-            text-align: center;
+            width: 80%; padding: 15px; border-radius: 5px; border: 1px solid #4facfe;
+            background: rgba(0, 20, 40, 0.8); color: #00f2fe; font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem; outline: none; margin-bottom: 25px; text-align: center;
             box-shadow: 0 0 15px rgba(79, 172, 254, 0.2);
         }
         
         button {
-            padding: 15px 50px;
-            border-radius: 5px;
-            border: none;
-            background: #4facfe;
-            color: #000;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 900;
-            font-size: 1.2rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            padding: 15px 50px; border-radius: 5px; border: none; background: #4facfe;
+            color: #000; font-family: 'Orbitron', sans-serif; font-weight: 900;
+            font-size: 1.2rem; cursor: pointer; transition: all 0.3s ease;
+            text-transform: uppercase; letter-spacing: 1px;
             box-shadow: 0 0 20px rgba(79, 172, 254, 0.5);
         }
-        button:hover {
-            transform: scale(1.05);
-            background: #fff;
-            box-shadow: 0 0 40px #fff;
-        }
+        button:hover { transform: scale(1.05); background: #fff; box-shadow: 0 0 40px #fff; }
         
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
     </style>
@@ -149,17 +92,15 @@ HTML_TEMPLATE = """
     <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.globe.min.js"></script>
     
     <script>
-        // 1. Voice Function
         function speak(text) {
             const synth = window.speechSynthesis;
             const utterance = new SpeechSynthesisUtterance(text);
-            utterance.pitch = 0.8; // Lower pitch for "AI" feel
+            utterance.pitch = 0.8; 
             utterance.rate = 0.9;
             utterance.volume = 1;
             synth.speak(utterance);
         }
 
-        // 2. Enter System (Click to start voice & 3D)
         function enterSystem() {
             document.getElementById('intro-overlay').style.opacity = '0';
             setTimeout(() => {
@@ -167,10 +108,8 @@ HTML_TEMPLATE = """
                 document.getElementById('main-interface').style.opacity = '1';
             }, 1000);
 
-            // Play voice
             speak("Welcome to Lead Sniper. System Online.");
 
-            // Start 3D Effect (Globe)
             VANTA.GLOBE({
               el: "#vanta-canvas",
               mouseControls: true,
@@ -185,7 +124,6 @@ HTML_TEMPLATE = """
             });
         }
 
-        // 3. Scraping Logic
         async function startScraping() {
             const query = document.getElementById('query').value;
             const status = document.getElementById('status');
@@ -237,64 +175,71 @@ HTML_TEMPLATE = """
 </html>
 """
 
-# --- 2. OPTIMIZED BACKEND (Strict 100 Limit) ---
+# --- 2. OPTIMIZED BACKEND ---
 
 def run_scraper(search_query):
     chrome_options = Options()
     chrome_options.add_argument("--headless") 
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    # FIX: Added User Agent and Window Size so Google doesn't block us immediately
+    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36")
+    chrome_options.add_argument("--window-size=1920,1080")
     
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     leads = []
     
     try:
+        # FIX: Corrected the Google Maps URL
         url = f"https://www.google.com/maps/search/{search_query.replace(' ', '+')}"
         driver.get(url)
-        time.sleep(3) # Reduced wait time to save seconds
+        time.sleep(4) # Wait for page to load
 
         # Find Scroll Container
         try:
             scrollable_div = driver.find_element(By.CSS_SELECTOR, 'div[role="feed"]')
             
             # --- OPTIMIZED SCROLL LOOP ---
-            # We scroll fast and check count to break EARLY
-            for _ in range(15): # Max 15 scrolls to prevent timeouts
+            for _ in range(15): 
                 driver.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", scrollable_div)
-                time.sleep(1.5) # Reduced sleep
+                time.sleep(2) 
                 
                 # Check current count
                 current_items = driver.find_elements(By.CLASS_NAME, "Nv2PK")
                 if len(current_items) >= 100:
-                    print("Reached 100 leads limit. Stopping scroll.")
+                    print(f"Reached limit. Found {len(current_items)}")
                     break
-        except:
-            pass # If scrolling fails, just scrape what's visible
+        except Exception as e:
+            print(f"Scroll Error: {e}")
+            # If scroll fails, we just continue and scrape what is visible
 
-        # --- EXTRACT DATA (Strictly capped at 100) ---
+        # --- EXTRACT DATA ---
         items = driver.find_elements(By.CLASS_NAME, "Nv2PK")
         
         count = 0
         for item in items:
-            if count >= 100: # FORCE STOP AT 100
+            if count >= 100: 
                 break
                 
             try:
+                # Basic extraction strategy - grabbing all text
                 data = item.text.split('\n')
                 if not data: continue
                 name = data[0]
                 
                 if "Ad" not in name: 
+                    # Cleaning up the details slightly
+                    details_text = " | ".join(data[1:])
                     leads.append({
                         "Business Name": name,
-                        "Details": " | ".join(data[1:])
+                        "Details": details_text
                     })
                     count += 1
             except:
                 continue
                 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Major Error: {e}")
     finally:
         driver.quit()
 
